@@ -59,10 +59,6 @@ public class Terminal {
         }
     }
 
-    public String pwd() {
-        return currentDir.getAbsolutePath();
-    }
-
     public void cd(String[] args) {
         File temp;
         if (args.length == 0) {
