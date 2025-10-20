@@ -1,22 +1,30 @@
+import java.io.File;
 import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.List;
 
 class Parser {
-    String commandName = "";
-    String[] args = {};
+    private String commandName = "";
+    private String[] args = {};
 
     public boolean parse(String input) {
-        commandName = "";
-        args = new String[]{};
-
         if (input == null || input.trim().isEmpty()) {
+            commandName = "";
+            args = new String[0];
             return false;
         }
-
-        return true;
+        String[] parts = input.trim().split("\\s+");
+        if (parts.length > 0) {
+            commandName = parts[0];
+            if (parts.length > 1) {
+                args = new String[parts.length - 1];
+                System.arraycopy(parts, 1, args, 0, parts.length - 1);
+            } else {
+                args = new String[0];
+            }
+            return true;
+        }
+        commandName = "";
+        args = new String[0];
+        return false;
     }
 
     public String getCommandName() {
@@ -30,51 +38,101 @@ class Parser {
 
 public class Terminal {
 
-    private final Parser parser;
-    private Path currentPath;
+    private final Parser parser = new Parser();
+    private File currentDir;
 
     public Terminal() {
-        this.parser = new Parser();
-
-        this.currentPath = Paths.get(System.getProperty("user.dir")).toAbsolutePath().normalize();
+        try {
+            this.currentDir = new File(System.getProperty("user.dir")).getCanonicalFile();
+        } catch (Exception e) {
+            System.err.println("Failed to get current directory. Defaulting to user home.");
+            this.currentDir = new File(System.getProperty("user.home"));
+        }
     }
 
-
-    private Path resolvePath(String pathStr) {
-        Path path = Paths.get(pathStr);
-        if (path.isAbsolute()) {
-            return path.normalize();
+    private File resolvePath(String path) {
+        File file = new File(path);
+        if (file.isAbsolute()) {
+            return file;
+        } else {
+            return new File(currentDir, path);
         }
-        return currentPath.resolve(path).normalize();
     }
 
     public String pwd() {
-        return currentPath.toString();
+        return currentDir.getAbsolutePath();
     }
 
     public void cd(String[] args) {
+        File temp;
         if (args.length == 0) {
-            currentPath = Paths.get(System.getProperty("user.dir")).toAbsolutePath().normalize();
+            temp = new File(System.getProperty("user.home"));
+        } else if (args.length == 1) {
+            temp = resolvePath(args[0]);
+        } else {
+            System.err.println("Invalid number of arguments for cd command.");
             return;
         }
-
-        String pathStr = args[0];
-        Path newPath = resolvePath(pathStr);
-
-        if (!Files.exists(newPath) || !Files.isDirectory(newPath)) {
-            System.err.println("Error: cd: No such file or directory: " + pathStr);
-            return;
-        }
-
-        try {
-            currentPath = newPath.toRealPath();
-        } catch (Exception e) {
-            System.err.println("Error: cd: Failed to access directory: " + e.getMessage());
+        if (temp.exists() && temp.isDirectory()) {
+            try {
+                currentDir = temp.getCanonicalFile();
+            } catch (Exception e) {
+                System.err.println("Failed to change directory to " + temp.getAbsolutePath());
+            }
+        } else {
+            System.err.println("Directory " + temp.getAbsolutePath() + " does not exist.");
         }
     }
 
+    public void mkdir(String[] args) {
+        if (args.length == 0) {
+            System.err.println("mkdir command requires a directory name.");
+            return;
+        }
+        for (String dir : args) {
+            File temp = resolvePath(dir);
+
+            if (temp.exists()) {
+                System.err.println("Directory " + temp.getAbsolutePath() + " already exists.");
+            } else {
+                try {
+                    Files.createDirectory(temp.toPath());
+                } catch (Exception e) {
+                    System.err.println("Failed to create directory " + temp.getAbsolutePath() + ": " + e.getMessage());
+                }
+            }
+        }
+    }
+
+    public void rmdir(String[] args) {
+        if (args.length == 0) {
+            System.err.println("rmdir command requires a directory name.");
+            return;
+        }
+        for (String dir : args) {
+            File temp = resolvePath(dir);
+            if (!temp.exists()) {
+                System.err.println("Directory " + temp.getAbsolutePath() + " does not exist.");
+            } else if (!temp.isDirectory()) {
+                System.err.println("File " + temp.getAbsolutePath() + " is not a directory.");
+            } else {
+                try {
+                    Files.deleteIfExists(temp.toPath());
+                } catch (Exception e) {
+                    System.err.println("Failed to delete directory " + temp.getAbsolutePath() + ": " + e.getMessage());
+                }
+            }
+        }
+    }
+
+    public void rm(String[] args) {
+        if (args.length == 0) {
+            System.err.println("rm command requires a file name.");
+            return;
+        }
+
+    }
 
     public static void main(String[] args) {
-
     }
 }
