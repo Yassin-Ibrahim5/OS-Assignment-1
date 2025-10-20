@@ -1,5 +1,8 @@
 import java.io.File;
 import java.nio.file.Files;
+import java.util.Scanner;
+
+import static java.util.Objects.requireNonNull;
 
 class Parser {
     private String commandName = "";
@@ -105,17 +108,30 @@ public class Terminal {
             System.err.println("rmdir command requires a directory name.");
             return;
         }
-        for (String dir : args) {
-            File temp = resolvePath(dir);
-            if (!temp.exists()) {
-                System.err.println("Directory " + temp.getAbsolutePath() + " does not exist.");
-            } else if (!temp.isDirectory()) {
-                System.err.println("File " + temp.getAbsolutePath() + " is not a directory.");
-            } else {
-                try {
-                    Files.deleteIfExists(temp.toPath());
-                } catch (Exception e) {
-                    System.err.println("Failed to delete directory " + temp.getAbsolutePath() + ": " + e.getMessage());
+        if (args.length == 1 && args[0].equals("*") && currentDir.list() != null) {
+            for (File file : requireNonNull(currentDir.listFiles())) {
+                if (file.isDirectory() && requireNonNull(file.list()).length == 0) {
+                    try {
+                        Files.deleteIfExists(file.toPath());
+                    } catch (Exception e) {
+                        System.err.println("Failed to delete directory " + file.getAbsolutePath() + ": " + e.getMessage());
+                        return;
+                    }
+                }
+            }
+        } else {
+            for (String dir : args) {
+                File temp = resolvePath(dir);
+                if (!temp.exists()) {
+                    System.err.println("Directory " + temp.getAbsolutePath() + " does not exist.");
+                } else if (!temp.isDirectory()) {
+                    System.err.println("File " + temp.getAbsolutePath() + " is not a directory.");
+                } else {
+                    try {
+                        Files.deleteIfExists(temp.toPath());
+                    } catch (Exception e) {
+                        System.err.println("Failed to delete directory " + temp.getAbsolutePath() + ": " + e.getMessage());
+                    }
                 }
             }
         }
@@ -126,9 +142,90 @@ public class Terminal {
             System.err.println("rm command requires a file name.");
             return;
         }
+        if (args[0].equals("-d") || args[0].equals("--directory")) {
+            for (int i = 1; i < args.length; i++) {
+                File temp = resolvePath(args[i]);
+                if (!temp.exists()) {
+                    System.err.println("File " + temp.getAbsolutePath() + " does not exist.");
+                } else if (!temp.isDirectory()) {
+                    System.err.println("Directory " + temp.getAbsolutePath() + " is not a directory.");
+                } else if (requireNonNull(temp.listFiles()).length != 0) {
+                    System.err.println("Directory " + temp.getAbsolutePath() + " is not empty.");
+                }
+                try {
+                    Files.deleteIfExists(temp.toPath());
+                } catch (Exception e) {
+                    System.err.println("Failed to delete file " + temp.getAbsolutePath() + ": " + e.getMessage());
+                }
+            }
+        }
+
+        if (args[0].equals("-r")) {
+            for (int i = 1; i < args.length; i++) {
+                File temp = resolvePath(args[i]);
+                if (!temp.exists()) {
+                    System.err.println("File " + temp.getAbsolutePath() + " does not exist.");
+                } else if (!temp.isDirectory()) {
+                    System.err.println("Directory " + temp.getAbsolutePath() + " is not a directory.");
+                }
+                try {
+                    Files.deleteIfExists(temp.toPath());
+                } catch (Exception e) {
+                    System.err.println("Failed to delete file " + temp.getAbsolutePath() + ": " + e.getMessage());
+                }
+            }
+        }
 
     }
 
+    public void commandAction(String commandName, String[] args) {
+        switch (commandName.toLowerCase()) {
+            case "cd":
+                cd(args);
+                break;
+            case "mkdir":
+                mkdir(args);
+                break;
+            case "rmdir":
+                rmdir(args);
+                break;
+            case "rm":
+                rm(args);
+                break;
+            case "exit":
+                break;
+            default:
+                System.err.println("Unknown command: " + commandName);
+                break;
+        }
+    }
+
     public static void main(String[] args) {
+        Terminal terminal = new Terminal();
+        Scanner scanner = new Scanner(System.in);
+        String input;
+
+        while (true) {
+            System.out.print(terminal.currentDir.getAbsolutePath());
+            System.out.print("> ");
+            if (scanner.hasNextLine()) {
+                input = scanner.nextLine();
+            } else {
+                break;
+            }
+
+            if (terminal.parser.parse(input)) {
+                String commandName = terminal.parser.getCommandName();
+                String[] arguments = terminal.parser.getArgs();
+
+                if (commandName.equalsIgnoreCase("exit")) {
+                    System.out.println("Terminating!");
+                    break;
+                } else {
+                    terminal.commandAction(commandName, arguments);
+                }
+            }
+        }
+        scanner.close();
     }
 }
