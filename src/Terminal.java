@@ -178,74 +178,95 @@ public class Terminal {
         }
 
     }
+
     public void cp(String[] args) {
+
         if (args.length == 0) {
             System.err.println("cp command can not be empty.");
             return;
         }
-        if(args.length != 2){
-            System.err.println("Invalid => cp <sourceFile> <destinationFile> ");
-            return;
+//        if (args.length != 2) {
+//            System.err.println("Invalid => cp <sourceFile> <destinationFile> ");
+//            return;
+//
+//        }
+        if (args[0].equals("-r")) {
+            if (args.length != 3) {
+                System.err.println("Usage: cp -r <sourceDirectory> <destinationDirectory>");
+                return;
+            }
+            File src = resolvePath(args[1]);
+            File dest = resolvePath(args[2]);
+            if (!src.exists()) {
+                System.err.println("Source Directory " + src.getAbsolutePath() + " does not exist.");
+                return;
+            }
+            if (!src.isDirectory()) {
+                System.err.println("Source " + dest.getAbsolutePath() + " is not a directory Use cp");
+                return;
+            }
+
+            try {
+                Files.walk(src.toPath()).forEach(sourcePath -> {
+                    File target = new File(dest, src.toPath().relativize(sourcePath).toString());
+                    try {
+                        if (sourcePath.toFile().isDirectory()) {
+                            target.mkdirs();
+                        } else {
+                            Files.copy(sourcePath, target.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                        }
+                    } catch (Exception e) {
+                        System.err.println("Failed to copy: " + sourcePath + " -> " + e.getMessage());
+                    }
+                });
+                System.out.println("Directory copied successfully.");
+            } catch (Exception e) {
+                System.err.println("Failed to copy directory: " + e.getMessage());
+            }
 
         }
-        File src = resolvePath(args[0]);
-        File dest = resolvePath(args[1]);
-        if (!src.exists()) {
-            System.err.println("Source File " + src.getAbsolutePath() + " does not exist.");
-            return;
-        }
-        if (src.isDirectory()) {
-            System.err.println("Source " + dest.getAbsolutePath() + " is a directory Use cp-r.");
-            return;
-        }
-        if (!src.isFile()) {
-            System.err.println("Source File " + src.getAbsolutePath() + " is not a file.");
-            return;
-        }
-        try {
-            Files.copy(src.toPath(),dest.toPath(), StandardCopyOption.REPLACE_EXISTING);
-            System.out.println("File copied successfully.");
-        } catch (Exception e) {
-            System.err.println("Failed to copy file: " + e.getMessage());
-        }
+        if (args.length == 2) {
+            File src = resolvePath(args[0]);
+            File dest = resolvePath(args[1]);
+            if (!src.exists()) {
+                System.err.println("Source File " + src.getAbsolutePath() + " does not exist.");
+                return;
+            }
+            if (src.isDirectory()) {
+                System.err.println("Source " + dest.getAbsolutePath() + " is a directory Use cp-r.");
+                return;
+            }
+            if (!src.isFile()) {
+                System.err.println("Source File " + src.getAbsolutePath() + " is not a file.");
+                return;
+            }
+            try {
+                Files.copy(src.toPath(), dest.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                System.out.println("File copied successfully.");
+            } catch (Exception e) {
+                System.err.println("Failed to copy file: " + e.getMessage());
+            }
 
+        }
     }
 
-    public void cp_r(String[] args) {
-        if (args.length == 0) {
-            System.err.println("cp_r command can not be empty.");
-        }
-        if (args.length != 3) {
-            System.err.println("Invalid => cp_r <sourceDirectory> <destinationDirectory>");
-        }
-        File src = resolvePath(args[1]);
-        File dest = resolvePath(args[2]);
-        if (!src.exists()) {
-            System.err.println("Source File " + src.getAbsolutePath() + " does not exist.");
-        }
-        if (!src.isDirectory()) {
-            System.err.println("Source " + src.getAbsolutePath() + " is not a directory Use cp.");
-        }
-        try {
-            Files.copy(src.toPath(),dest.toPath(), StandardCopyOption.REPLACE_EXISTING);
-            System.out.println("File copied successfully.");
-        } catch (Exception e) {
-            System.err.println("Failed to copy file: " + e.getMessage());
-        }
 
-    }
+
+
     public void zip(String[] args) {
         if (args.length == 0) {
             System.err.println("zip command can not be empty.");
 
             return;
         }
-        if (args.length == 1 ){
+        if (args.length == 1) {
             System.err.println("zip file must store some files.");
 
         }
     }
-    public void unzip(String[] args) {}
+
+    public void unzip(String[] args) {
+    }
 
     public void commandAction(String commandName, String[] args) {
         switch (commandName.toLowerCase()) {
@@ -263,9 +284,6 @@ public class Terminal {
                 break;
             case "cp":
                 cp(args);
-                break;
-            case "cp -r":
-                cp_r(args);
                 break;
             case "zip":
                 zip(args);
