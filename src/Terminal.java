@@ -62,6 +62,10 @@ public class Terminal {
         }
     }
 
+    public String pwd() {
+        return currentDir.getAbsolutePath();
+    }
+
     public void cd(String[] args) {
         File temp;
         if (args.length == 0) {
@@ -81,6 +85,23 @@ public class Terminal {
         } else {
             System.err.println("Directory " + temp.getAbsolutePath() + " does not exist.");
         }
+    }
+
+    public void ls() {
+        if (!currentDir.exists() || !currentDir.isDirectory()) {
+            System.err.println("Directory " + currentDir.getAbsolutePath() + " does not exist or is not a directory.");
+            return;
+        }
+
+        File[] files = currentDir.listFiles();
+        if (files == null) {
+            System.err.println("Failed to list contents of " + currentDir.getAbsolutePath());
+            return;
+        }
+        for (int i = 0 ; i < files.length; i++) {
+            System.out.println(i + 1 + "-" + files[i].getName() + (files[i].isDirectory() ? "\\" : "") + "\t");
+        }
+        System.out.println();
     }
 
     public void mkdir(String[] args) {
@@ -137,6 +158,26 @@ public class Terminal {
         }
     }
 
+    public void touch(String[] args) {
+        if (args.length == 0) {
+            System.err.println("touch command requires at least one path.");
+        }
+        for (String path : args) {
+            File temp = resolvePath(path);
+
+            if (temp.exists()) {
+                if (temp.isDirectory()) {
+                    System.err.println("Cannot create directory " + temp.getAbsolutePath() + "using 'touch'. Please use 'mkdir'.");
+                }
+            }
+            try {
+                Files.createFile(temp.toPath());
+            } catch (Exception e) {
+                System.err.println("Failed to create file " + temp.getAbsolutePath() + ": " + e.getMessage());
+            }
+        }
+    }
+
     public void rm(String[] args) {
         if (args.length == 0) {
             System.err.println("rm command requires a file name.");
@@ -180,8 +221,20 @@ public class Terminal {
 
     public void commandAction(String commandName, String[] args) {
         switch (commandName.toLowerCase()) {
+            case "pwd":
+                if (args.length != 0) {
+                    System.err.println("pwd command takes no arguments.");
+                }
+                System.out.println(pwd() + "\n");
+                break;
             case "cd":
                 cd(args);
+                break;
+            case "ls":
+                if  (args.length != 0) {
+                    System.err.println("ls command takes no arguments.");
+                }
+                ls();
                 break;
             case "mkdir":
                 mkdir(args);
@@ -206,7 +259,7 @@ public class Terminal {
         String input;
 
         while (true) {
-            System.out.print(terminal.currentDir.getAbsolutePath());
+            System.out.print(terminal.pwd());
             System.out.print("> ");
             if (scanner.hasNextLine()) {
                 input = scanner.nextLine();
