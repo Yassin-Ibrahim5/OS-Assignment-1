@@ -1,4 +1,6 @@
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.DirectoryNotEmptyException;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.Scanner;
@@ -54,6 +56,35 @@ public class Terminal {
         }
     }
 
+    public static void main(String[] args) {
+        Terminal terminal = new Terminal();
+        Scanner scanner = new Scanner(System.in);
+        String input;
+
+        while (true) {
+            System.out.print(terminal.pwd());
+            System.out.print("> ");
+            if (scanner.hasNextLine()) {
+                input = scanner.nextLine();
+            } else {
+                break;
+            }
+
+            if (terminal.parser.parse(input)) {
+                String commandName = terminal.parser.getCommandName();
+                String[] arguments = terminal.parser.getArgs();
+
+                if (commandName.equalsIgnoreCase("exit")) {
+                    System.out.println("Terminating!");
+                    break;
+                } else {
+                    terminal.commandAction(commandName, arguments);
+                }
+            }
+        }
+        scanner.close();
+    }
+
     private File resolvePath(String path) {
         File file = new File(path);
         if (file.isAbsolute()) {
@@ -99,7 +130,7 @@ public class Terminal {
             System.err.println("Failed to list contents of " + currentDir.getAbsolutePath());
             return;
         }
-        for (int i = 0 ; i < files.length; i++) {
+        for (int i = 0; i < files.length; i++) {
             System.out.println(i + 1 + "-" + files[i].getName() + (files[i].isDirectory() ? "\\" : "") + "\t");
         }
         System.out.println();
@@ -151,7 +182,9 @@ public class Terminal {
                 } else {
                     try {
                         Files.deleteIfExists(temp.toPath());
-                    } catch (Exception e) {
+                    } catch (DirectoryNotEmptyException e) {
+                        System.err.println("Failed to delete directory " + temp.getAbsolutePath() + ": " + "Directory is not empty.");
+                    } catch (IOException e) {
                         System.err.println("Failed to delete directory " + temp.getAbsolutePath() + ": " + e.getMessage());
                     }
                 }
@@ -195,14 +228,13 @@ public class Terminal {
                     System.err.println("Directory " + temp.getAbsolutePath() + " is not empty.");
                 }
                 try {
-                    Files.deleteIfExists(temp.toPath());
+                    Files.delete(temp.toPath());
                 } catch (Exception e) {
                     System.err.println("Failed to delete file " + temp.getAbsolutePath() + ": " + e.getMessage());
                 }
             }
         }
-
-        if (args[0].equals("-r")) {
+        else if (args[0].equals("-r")) {
             for (int i = 1; i < args.length; i++) {
                 File temp = resolvePath(args[i]);
                 if (!temp.exists()) {
@@ -217,7 +249,20 @@ public class Terminal {
                 }
             }
         }
-
+        else {
+            for (String path : args) {
+                File temp = resolvePath(path);
+                if (!temp.exists()) {
+                    System.err.println("File " + temp.getAbsolutePath() + " does not exist.");
+                } else {
+                    try {
+                        Files.deleteIfExists(temp.toPath());
+                    } catch (Exception e) {
+                        System.err.println("Failed to delete file " + temp.getAbsolutePath() + ": " + e.getMessage());
+                    }
+                }
+            }
+        }
     }
 
     public void cp(String[] args) {
@@ -226,11 +271,6 @@ public class Terminal {
             System.err.println("cp command can not be empty.");
             return;
         }
-//        if (args.length != 2) {
-//            System.err.println("Invalid => cp <sourceFile> <destinationFile> ");
-//            return;
-//
-//        }
         if (args[0].equals("-r")) {
             if (args.length != 3) {
                 System.err.println("Usage: cp -r <sourceDirectory> <destinationDirectory>");
@@ -291,18 +331,13 @@ public class Terminal {
         }
     }
 
-
-
-
     public void zip(String[] args) {
         if (args.length == 0) {
             System.err.println("zip command can not be empty.");
-
             return;
         }
         if (args.length == 1) {
             System.err.println("zip file must store some files.");
-
         }
     }
 
@@ -321,7 +356,7 @@ public class Terminal {
                 cd(args);
                 break;
             case "ls":
-                if  (args.length != 0) {
+                if (args.length != 0) {
                     System.err.println("ls command takes no arguments.");
                 }
                 ls();
@@ -331,6 +366,9 @@ public class Terminal {
                 break;
             case "rmdir":
                 rmdir(args);
+                break;
+            case "touch":
+                touch(args);
                 break;
             case "rm":
                 rm(args);
@@ -352,32 +390,5 @@ public class Terminal {
         }
     }
 
-    public static void main(String[] args) {
-        Terminal terminal = new Terminal();
-        Scanner scanner = new Scanner(System.in);
-        String input;
 
-        while (true) {
-            System.out.print(terminal.pwd());
-            System.out.print("> ");
-            if (scanner.hasNextLine()) {
-                input = scanner.nextLine();
-            } else {
-                break;
-            }
-
-            if (terminal.parser.parse(input)) {
-                String commandName = terminal.parser.getCommandName();
-                String[] arguments = terminal.parser.getArgs();
-
-                if (commandName.equalsIgnoreCase("exit")) {
-                    System.out.println("Terminating!");
-                    break;
-                } else {
-                    terminal.commandAction(commandName, arguments);
-                }
-            }
-        }
-        scanner.close();
-    }
 }
