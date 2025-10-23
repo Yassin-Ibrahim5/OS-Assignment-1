@@ -7,8 +7,8 @@ import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.Scanner;
 import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
 import java.util.zip.ZipInputStream;
+import java.util.zip.ZipOutputStream;
 
 import static java.util.Objects.requireNonNull;
 
@@ -295,7 +295,7 @@ public class Terminal {
                 return;
             }
 
-            try(var stream = Files.walk(src.toPath())) {
+            try (var stream = Files.walk(src.toPath())) {
                 stream.forEach(sourcePath -> {
                     File target = new File(dest, src.toPath().relativize(sourcePath).toString());
                     try {
@@ -399,9 +399,7 @@ public class Terminal {
             } catch (Exception e) {
                 System.err.println("Failed to zip file: " + e.getMessage());
             }
-        }
-
-        else {
+        } else {
             if (args.length < 3) {
                 System.err.println("zip -r command requires at least three arguments.");
                 return;
@@ -428,6 +426,7 @@ public class Terminal {
             }
         }
     }
+
     public void unzip(String[] args) {
         if (args.length == 3 && args[1].equals("-d")) {
             File zipFile = resolvePath(args[0]);
@@ -439,8 +438,7 @@ public class Terminal {
             }
 
             extractZip(zipFile, destDir);
-        }
-        else if (args.length == 1) {
+        } else if (args.length == 1) {
             File zipFile = resolvePath(args[0]);
 
             if (!zipFile.exists()) {
@@ -449,11 +447,11 @@ public class Terminal {
             }
 
             extractZip(zipFile, currentDir);
-        }
-        else {
+        } else {
             System.err.println("Usage: unzip <archive.zip> OR unzip <archive.zip> -d <destination>");
         }
     }
+
     private void extractZip(File zipFile, File destDir) {
         try (ZipInputStream zis = new ZipInputStream(new FileInputStream(zipFile))) {
 
@@ -467,8 +465,7 @@ public class Terminal {
                     if (!outputFile.exists()) {
                         outputFile.mkdirs();
                     }
-                }
-                else {
+                } else {
                     File parent = outputFile.getParentFile();
                     if (parent != null && !parent.exists()) {
                         parent.mkdirs();
@@ -527,7 +524,7 @@ public class Terminal {
                 rm(args);
                 break;
             case "cp":
-//                cp(args);
+                cp(args);
                 break;
             case "zip":
                 zip(args);
