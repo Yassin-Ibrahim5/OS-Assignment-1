@@ -8,6 +8,7 @@ import java.nio.file.StandardCopyOption;
 import java.util.Scanner;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
+import java.util.zip.ZipInputStream;
 
 import static java.util.Objects.requireNonNull;
 
@@ -428,7 +429,69 @@ public class Terminal {
         }
     }
     public void unzip(String[] args) {
+        if (args.length == 3 && args[1].equals("-d")) {
+            File zipFile = resolvePath(args[0]);
+            File destDir = resolvePath(args[2]);
 
+            if (!zipFile.exists()) {
+                System.err.println("Zip file " + zipFile.getAbsolutePath() + " does not exist.");
+                return;
+            }
+
+            extractZip(zipFile, destDir);
+        }
+        else if (args.length == 1) {
+            File zipFile = resolvePath(args[0]);
+
+            if (!zipFile.exists()) {
+                System.err.println("Zip file " + zipFile.getAbsolutePath() + " does not exist.");
+                return;
+            }
+
+            extractZip(zipFile, currentDir);
+        }
+        else {
+            System.err.println("Usage: unzip <archive.zip> OR unzip <archive.zip> -d <destination>");
+        }
+    }
+    private void extractZip(File zipFile, File destDir) {
+        try (ZipInputStream zis = new ZipInputStream(new FileInputStream(zipFile))) {
+
+            ZipEntry entry;
+
+            while ((entry = zis.getNextEntry()) != null) {
+
+                File outputFile = new File(destDir, entry.getName());
+
+                if (entry.isDirectory()) {
+                    if (!outputFile.exists()) {
+                        outputFile.mkdirs();
+                    }
+                }
+                else {
+                    File parent = outputFile.getParentFile();
+                    if (parent != null && !parent.exists()) {
+                        parent.mkdirs();
+                    }
+
+                    try (FileOutputStream fos = new FileOutputStream(outputFile)) {
+                        byte[] buffer = new byte[1024];
+                        int length;
+
+                        while ((length = zis.read(buffer)) > 0) {
+                            fos.write(buffer, 0, length);
+                        }
+                    }
+                }
+
+                zis.closeEntry();
+            }
+
+            System.out.println("Archive extracted successfully to: " + destDir.getAbsolutePath());
+
+        } catch (IOException e) {
+            System.err.println("Failed to extract zip: " + e.getMessage());
+        }
     }
 
     public void commandAction(String commandName, String[] args) {
@@ -464,7 +527,7 @@ public class Terminal {
                 rm(args);
                 break;
             case "cp":
-                cp(args);
+//                cp(args);
                 break;
             case "zip":
                 zip(args);
