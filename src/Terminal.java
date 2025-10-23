@@ -1,9 +1,13 @@
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.DirectoryNotEmptyException;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.Scanner;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 import static java.util.Objects.requireNonNull;
 
@@ -233,8 +237,7 @@ public class Terminal {
                     System.err.println("Failed to delete file " + temp.getAbsolutePath() + ": " + e.getMessage());
                 }
             }
-        }
-        else if (args[0].equals("-r")) {
+        } else if (args[0].equals("-r")) {
             for (int i = 1; i < args.length; i++) {
                 File temp = resolvePath(args[i]);
                 if (!temp.exists()) {
@@ -248,8 +251,7 @@ public class Terminal {
                     System.err.println("Failed to delete file " + temp.getAbsolutePath() + ": " + e.getMessage());
                 }
             }
-        }
-        else {
+        } else {
             for (String path : args) {
                 File temp = resolvePath(path);
                 if (!temp.exists()) {
@@ -331,13 +333,56 @@ public class Terminal {
         }
     }
 
+    private void addToZip(File file, String path, ZipOutputStream zipOutputStream) throws Exception {
+        String zipPath = path + file.getName();
+        if (file.isDirectory()) {
+            if (!zipPath.endsWith("/")) {
+                zipPath += "/";
+            }
+            zipOutputStream.putNextEntry(new ZipEntry(zipPath));
+            zipOutputStream.closeEntry();
+
+            File[] children = file.listFiles();
+            if (children != null) {
+                for (File child : children) {
+                    addToZip(child, zipPath, zipOutputStream);
+                }
+            }
+        } else {
+            zipOutputStream.putNextEntry(new ZipEntry(zipPath));
+            try (FileInputStream fis = new FileInputStream(file)) {
+                byte[] bytes = new byte[1024];
+                int length;
+                while ((length = fis.read(bytes)) > 0) {
+                    zipOutputStream.write(bytes, 0, length);
+                }
+            }
+            zipOutputStream.closeEntry();
+        }
+    }
+
+//    private void addDirToZip(File file, String path, ZipOutputStream zipOutputStream) throws Exception {}
+
     public void zip(String[] args) {
-        if (args.length == 0) {
-            System.err.println("zip command can not be empty.");
+        if (args.length < 2) {
+            System.err.println("zip command requires at least two arguments (destination and file(s) to zip).");
             return;
         }
-        if (args.length == 1) {
-            System.err.println("zip file must store some files.");
+        File destFile = resolvePath(args[0]);
+        try (ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(destFile))) {
+
+            for (int i = 1; i < args.length; i++) {
+                File file = resolvePath(args[i]);
+                if (!file.exists()) {
+                    System.err.println("File " + file.getAbsolutePath() + " does not exist.");
+                    continue;
+                }
+
+                addToZip(file, "", zipOutputStream);
+            }
+            System.out.println("Archive created successfully: " + destFile.getName());
+        } catch (Exception e) {
+            System.err.println("Failed to zip file: " + e.getMessage());
         }
     }
 
