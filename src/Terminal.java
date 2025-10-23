@@ -98,6 +98,11 @@ public class Terminal {
         }
     }
 
+    public void echo(String[] args) {
+        System.out.println(String.join(" ", args));
+        System.out.println();
+    }
+
     public String pwd() {
         return currentDir.getAbsolutePath();
     }
@@ -275,7 +280,7 @@ public class Terminal {
         }
         if (args[0].equals("-r")) {
             if (args.length != 3) {
-                System.err.println("Usage: cp -r <sourceDirectory> <destinationDirectory>");
+                System.err.println("Usage: cp -r <source" + "> <destinationDirectory>");
                 return;
             }
             File src = resolvePath(args[1]);
@@ -361,36 +366,75 @@ public class Terminal {
         }
     }
 
-//    private void addDirToZip(File file, String path, ZipOutputStream zipOutputStream) throws Exception {}
-
     public void zip(String[] args) {
-        if (args.length < 2) {
-            System.err.println("zip command requires at least two arguments (destination and file(s) to zip).");
-            return;
-        }
-        File destFile = resolvePath(args[0]);
-        try (ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(destFile))) {
+
+        if (!(args[0].equals("-r"))) {
+            if (args.length < 2) {
+                System.err.println("zip command requires at least two arguments (destination and file(s) to zip).");
+                return;
+            }
 
             for (int i = 1; i < args.length; i++) {
                 File file = resolvePath(args[i]);
                 if (!file.exists()) {
                     System.err.println("File " + file.getAbsolutePath() + " does not exist.");
-                    continue;
+                    return;
                 }
-
-                addToZip(file, "", zipOutputStream);
+                if (file.isDirectory()) {
+                    System.err.println("File " + file.getAbsolutePath() + " is a directory, use zip -r");
+                    return;
+                }
             }
-            System.out.println("Archive created successfully: " + destFile.getName());
-        } catch (Exception e) {
-            System.err.println("Failed to zip file: " + e.getMessage());
+
+            File destFile = resolvePath(args[0]);
+            try (ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(destFile))) {
+                for (int i = 1; i < args.length; i++) {
+                    File file = resolvePath(args[i]);
+                    addToZip(file, "", zipOutputStream);
+                }
+                System.out.println("Archive created successfully: " + destFile.getName());
+            } catch (Exception e) {
+                System.err.println("Failed to zip file: " + e.getMessage());
+            }
+        }
+
+        else {
+            if (args.length < 3) {
+                System.err.println("zip -r command requires at least three arguments.");
+                return;
+            }
+
+            File sourceDir = resolvePath(args[2]);
+            if (!sourceDir.exists()) {
+                System.err.println("Directory " + sourceDir.getAbsolutePath() + " does not exist.");
+                return;
+            }
+            if (!sourceDir.isDirectory()) {
+                System.err.println(sourceDir.getAbsolutePath() + " is not a directory, use regular zip");
+                return;
+            }
+
+            File destZip = resolvePath(args[1]);
+            try (ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(destZip))) {
+
+                addToZip(sourceDir, sourceDir.getName(), zipOutputStream);
+
+                System.out.println("Archive created successfully: " + destZip.getName());
+            } catch (Exception e) {
+                System.err.println("Failed to zip directory: " + e.getMessage());
+            }
         }
     }
 
     public void unzip(String[] args) {
+
     }
 
     public void commandAction(String commandName, String[] args) {
         switch (commandName.toLowerCase()) {
+            case "echo":
+                echo(args);
+                break;
             case "pwd":
                 if (args.length != 0) {
                     System.err.println("pwd command takes no arguments.");
@@ -434,6 +478,4 @@ public class Terminal {
                 break;
         }
     }
-
-
 }
