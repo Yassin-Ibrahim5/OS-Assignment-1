@@ -294,12 +294,14 @@ public class Terminal {
                 return;
             }
 
-            try {
-                Files.walk(src.toPath()).forEach(sourcePath -> {
+            try(var stream = Files.walk(src.toPath())) {
+                stream.forEach(sourcePath -> {
                     File target = new File(dest, src.toPath().relativize(sourcePath).toString());
                     try {
                         if (sourcePath.toFile().isDirectory()) {
-                            target.mkdirs();
+                            if (!target.exists() && !target.mkdirs()) {
+                                System.err.println("Failed to create directory: " + target.getAbsolutePath());
+                            }
                         } else {
                             Files.copy(sourcePath, target.toPath(), StandardCopyOption.REPLACE_EXISTING);
                         }
