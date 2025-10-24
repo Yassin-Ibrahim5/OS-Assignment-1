@@ -1,11 +1,9 @@
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.nio.file.DirectoryNotEmptyException;
-import java.nio.file.Files;
-import java.nio.file.StandardCopyOption;
+import java.io.*;
+import java.nio.file.*;
+import java.util.List;
+import java.util.Objects;
 import java.util.Scanner;
+import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
@@ -99,11 +97,6 @@ public class Terminal {
         }
     }
 
-    public void echo(String[] args) {
-        System.out.println(String.join(" ", args));
-        System.out.println();
-    }
-
     public String pwd() {
         return currentDir.getAbsolutePath();
     }
@@ -129,21 +122,249 @@ public class Terminal {
         }
     }
 
-    public void ls() {
+    public void ls(String[] args) {
         if (!currentDir.exists() || !currentDir.isDirectory()) {
             System.err.println("Directory " + currentDir.getAbsolutePath() + " does not exist or is not a directory.");
             return;
         }
-
         File[] files = currentDir.listFiles();
         if (files == null) {
             System.err.println("Failed to list contents of " + currentDir.getAbsolutePath());
             return;
         }
-        for (int i = 0; i < files.length; i++) {
-            System.out.println(i + 1 + "-" + files[i].getName() + (files[i].isDirectory() ? "\\" : "") + "\t");
+        if (args.length == 0) {
+            for (int i = 0; i < files.length; i++) {
+                System.out.println(i + 1 + "-" + files[i].getName() + (files[i].isDirectory() ? "\\" : "") + "\t");
+            }
+            System.out.println();
+        } else if (args.length == 2 && args[0].equals(">")) {
+            try {
+                File file2 = resolvePath(args[1]);
+                StringBuilder output = new StringBuilder();
+
+                for (int i = 0; i < files.length; i++) {
+                    output.append((i + 1)).append("-").append(files[i].getName()).append(files[i].isDirectory() ? "\\" : "").append("\n");
+                }
+
+                Files.write(file2.toPath(), output.toString().getBytes());
+                System.out.println("Directory content successfully written to " + file2.getName());
+            } catch (IOException e) {
+                System.out.println("Error writing to file: " + e.getMessage());
+            }
+        } else if ((args.length == 2 && args[0].equals(">>"))) {
+            try {
+                File file2 = resolvePath(args[1]);
+                StringBuilder output = new StringBuilder();
+
+                for (int i = 0; i < files.length; i++) {
+                    output.append((i + 1)).append("-").append(files[i].getName()).append(files[i].isDirectory() ? "\\" : "").append("\n");
+                }
+
+                Files.write(file2.toPath(), output.toString().getBytes(), StandardOpenOption.APPEND);
+                System.out.println("Directory content successfully written to " + file2.getName());
+            } catch (IOException e) {
+                System.out.println("Error writing to file: " + e.getMessage());
+            }
         }
-        System.out.println();
+    }
+
+    private void read(File file1) {
+        if (file1.exists()) {
+            Path filePath = Paths.get(file1.getAbsolutePath());
+            try {
+                List<String> lines = Files.readAllLines(filePath);
+
+                for (String line : lines) {
+                    System.out.println(line);
+                }
+            } catch (IOException e) {
+                System.out.println("Error reading file: " + e.getMessage());
+            }
+        } else {
+            System.out.println(" File does not exist: \n" + file1 + '\n');
+        }
+
+    }
+
+    private void readAndWrite(File InFile1, File File2, File File3, Boolean operator) {
+        if (InFile1.exists() && File3 == null && !operator) {
+            Path filePath = Paths.get(InFile1.getAbsolutePath());
+            try {
+                List<String> lines = Files.readAllLines(filePath);
+
+                try (BufferedWriter writer = new BufferedWriter(new FileWriter(File2))) {
+                    for (String line : lines) {
+                        writer.write(line);
+                        writer.newLine();
+                    }
+                }
+
+                System.out.println("File content successfully written to " + File2.getName());
+            } catch (IOException e) {
+                System.out.println("Error processing file: " + e.getMessage());
+            }
+        } else if (InFile1.exists() && File3 == null && operator) {
+            Path filePath = Paths.get(InFile1.getAbsolutePath());
+            try {
+                List<String> lines = Files.readAllLines(filePath);
+
+                try (BufferedWriter writer = new BufferedWriter(new FileWriter(File2, true))) {
+                    for (String line : lines) {
+                        writer.write(line);
+                        writer.newLine();
+                    }
+                }
+
+                System.out.println("File content successfully written to " + File2.getName());
+            } catch (IOException e) {
+                System.out.println("Error processing file: " + e.getMessage());
+            }
+        } else if (InFile1.exists() && File3.exists() && !operator) {
+            Path filePath = Paths.get(InFile1.getAbsolutePath());
+            Path filePath2 = Paths.get(File3.getAbsolutePath());
+            try {
+                List<String> lines = Files.readAllLines(filePath);
+                List<String> lines2 = Files.readAllLines(filePath2);
+
+                try (BufferedWriter writer = new BufferedWriter(new FileWriter(File2))) {
+                    for (String line : lines) {
+                        writer.write(line);
+                        writer.newLine();
+                    }
+                    for (String line2 : lines2) {
+                        writer.write(line2);
+                        writer.newLine();
+                    }
+                }
+
+                System.out.println("File content successfully written to " + File2.getName());
+            } catch (IOException e) {
+                System.out.println("Error processing file: " + e.getMessage());
+            }
+        } else if (InFile1.exists() && File3.exists() && operator) {
+            Path filePath = Paths.get(InFile1.getAbsolutePath());
+            Path filePath2 = Paths.get(File3.getAbsolutePath());
+            try {
+                List<String> lines = Files.readAllLines(filePath);
+                List<String> lines2 = Files.readAllLines(filePath2);
+
+                try (BufferedWriter writer = new BufferedWriter(new FileWriter(File2, true))) {
+                    for (String line : lines) {
+                        writer.write(line);
+                        writer.newLine();
+                    }
+                    for (String line2 : lines2) {
+                        writer.write(line2);
+                        writer.newLine();
+                    }
+                }
+
+                System.out.println("File content successfully written to " + File2.getName());
+            } catch (IOException e) {
+                System.out.println("Error processing file: " + e.getMessage());
+            }
+        } else {
+            System.out.println(" File does not exist: \n" + InFile1 + '\n');
+        }
+    }
+
+    private int[] count(File file1) {
+        long lineCount = 0;
+        long wordCount = 0;
+        long charCount = 0;
+        Path filePath = Paths.get(file1.getAbsolutePath());
+        try (Stream<String> lines = Files.lines(filePath)) {
+            List<String> allLines = lines.toList();
+            lineCount = allLines.size();
+            wordCount = allLines.stream().flatMap(line -> java.util.Arrays.stream(line.trim().split("\\s+"))).filter(word -> !word.isEmpty()).count();
+            charCount = allLines.stream().mapToLong(String::length).sum();
+        } catch (IOException e) {
+            System.out.println("Error reading file: " + e.getMessage());
+        }
+        return new int[]{(int) lineCount, (int) wordCount, (int) charCount};
+    }
+
+    public void cat(String[] args) {
+        if (args.length == 0) {
+            System.err.println("cat command requires one or 2 arguments.");
+            return;
+        }
+        if (args.length == 1) {
+            File file1 = resolvePath(args[0]);
+            read(file1);
+
+        } else if (args.length == 2) {
+            File file1 = resolvePath(args[0]);
+            File file2 = resolvePath(args[1]);
+            read(file1);
+            read(file2);
+        } else if (args.length == 3 && args[1].equals(">")) {
+            File file1 = resolvePath(args[0]);
+            File file2 = resolvePath(args[2]);
+            File file3 = null;
+            readAndWrite(file1, file2, file3, false);
+        } else if (args.length == 4 && args[2].equals(">")) {
+            File file1 = resolvePath(args[0]);
+            File file2 = resolvePath(args[3]);
+            File file3 = resolvePath(args[1]);
+            readAndWrite(file1, file2, file3, false);
+        } else if (args.length == 3 && args[1].equals(">>")) {
+            File file1 = resolvePath(args[0]);
+            File file2 = resolvePath(args[2]);
+            File file3 = null;
+            readAndWrite(file1, file2, null, true);
+        } else if (args.length == 4 && args[2].equals(">>")) {
+            File file1 = resolvePath(args[0]);
+            File file2 = resolvePath(args[3]);
+            File file3 = resolvePath(args[1]);
+            readAndWrite(file1, file2, file3, true);
+        } else {
+            System.err.println("too many arguments.");
+        }
+    }
+
+    public void wc(String[] args) {
+
+        if (args.length == 0) {
+            System.err.println("too few arguments.");
+        } else if (args.length == 1) {
+
+            File file1 = resolvePath(args[0]);
+            int[] result = count(file1);
+
+            System.out.println(result[0] + " " + result[1] + " " + result[2] + " " + args[0]);
+        } else if (args.length == 3 && Objects.equals(args[1], ">")) {
+            File file1 = resolvePath(args[0]);
+
+            int[] result = count(file1);
+            File file2 = resolvePath(args[2]);
+
+            try {
+                String output = "Lines: " + result[0] + "\nWords: " + result[1] + "\nChars: " + result[2];
+
+                Files.write(file2.toPath(), output.getBytes());
+
+                System.out.println("File content successfully written to " + file2.getName());
+            } catch (IOException e) {
+                System.out.println("Error reading file: " + e.getMessage());
+            }
+        } else if (args.length == 3 && Objects.equals(args[1], ">>")) {
+            File file1 = resolvePath(args[0]);
+
+            int[] result = count(file1);
+            File file2 = resolvePath(args[2]);
+            try {
+                String output = "Lines: " + result[0] + "\nWords: " + result[1] + "\nChars: " + result[2];
+                Files.write(file2.toPath(), output.getBytes(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+                System.out.println("File content successfully written to " + file2.getName());
+            } catch (IOException e) {
+                System.out.println("Error reading file: " + e.getMessage());
+            }
+        } else {
+            System.err.println("too many arguments.");
+        }
+
+
     }
 
     public void mkdir(String[] args) {
@@ -493,24 +714,41 @@ public class Terminal {
 
     public void commandAction(String commandName, String[] args) {
         switch (commandName.toLowerCase()) {
-            case "echo":
-                echo(args);
-                break;
             case "pwd":
-                if (args.length != 0) {
+                if (args.length == 0) {
+                    System.out.println(pwd() + "\n");
+                } else if (args.length == 2 && args[0].equals(">")) {
+                    try {
+                        File file2 = resolvePath(args[1]);
+                        String output = pwd() + "\n";
+                        Files.write(file2.toPath(), output.getBytes());
+                        System.out.println("File content successfully written to " + file2.getName());
+                    } catch (IOException e) {
+                        System.out.println("Error reading file: " + e.getMessage());
+                    }
+                } else if (args.length == 2 && args[0].equals(">>")) {
+                    try {
+                        File file2 = resolvePath(args[1]);
+                        String output = pwd() + "\n";
+                        Files.write(file2.toPath(), output.getBytes(), StandardOpenOption.APPEND);
+                        System.out.println("File content successfully written to " + file2.getName());
+                    } catch (IOException e) {
+                        System.out.println("Error reading file: " + e.getMessage());
+                    }
+                } else {
                     System.err.println("pwd command takes no arguments.");
                 }
-                System.out.println(pwd() + "\n");
                 break;
             case "cd":
                 cd(args);
                 break;
             case "ls":
-                if (args.length != 0) {
+                if (args.length == 0 || args.length == 2) {
+                    ls(args);
+                    break;
+                } else {
                     System.err.println("ls command takes no arguments.");
                 }
-                ls();
-                break;
             case "mkdir":
                 mkdir(args);
                 break;
@@ -525,6 +763,12 @@ public class Terminal {
                 break;
             case "cp":
                 cp(args);
+                break;
+            case "cat":
+                cat(args);
+                break;
+            case "wc":
+                wc(args);
                 break;
             case "zip":
                 zip(args);
