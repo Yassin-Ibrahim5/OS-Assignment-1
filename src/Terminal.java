@@ -372,16 +372,38 @@ public class Terminal {
             System.err.println("mkdir command requires a directory name.");
             return;
         }
-        for (String dir : args) {
-            File temp = resolvePath(dir);
 
-            if (temp.exists()) {
-                System.err.println("Directory " + temp.getAbsolutePath() + " already exists.");
-            } else {
-                try {
-                    Files.createDirectory(temp.toPath());
-                } catch (Exception e) {
-                    System.err.println("Failed to create directory " + temp.getAbsolutePath() + ": " + e.getMessage());
+        File destPath = resolvePath(args[args.length - 1]);
+        boolean lastArgIsPath = args.length > 1 && (args[args.length - 1].contains(File.separator) ||
+                args[args.length - 1].contains("/") ||
+                new File(args[args.length - 1]).isAbsolute());
+        if (lastArgIsPath) {
+            for (int i = 0; i < args.length - 1; i++) {
+                String dir = new File(args[i]).getName();
+                File temp = new File(destPath, dir);
+
+                if (temp.exists()) {
+                    System.err.println("Directory " + temp.getAbsolutePath() + " already exists.");
+                } else {
+                    try {
+                        Files.createDirectories(temp.toPath());
+                    } catch (Exception e) {
+                        System.err.println("Failed to create directory " + temp.getAbsolutePath() + ": " + e.getMessage());
+                    }
+                }
+            }
+        } else {
+            for (String dir : args) {
+                File temp = resolvePath(dir);
+
+                if (temp.exists()) {
+                    System.err.println("Directory " + temp.getAbsolutePath() + " already exists.");
+                } else {
+                    try {
+                        Files.createDirectories(temp.toPath());
+                    } catch (Exception e) {
+                        System.err.println("Failed to create directory " + temp.getAbsolutePath() + ": " + e.getMessage());
+                    }
                 }
             }
         }
