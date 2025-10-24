@@ -81,7 +81,7 @@ public class Terminal {
                     System.out.println("Terminating!");
                     break;
                 } else {
-                    terminal.commandAction(commandName, arguments);
+                    terminal.chooseCommandAction(commandName, arguments);
                 }
             }
         }
@@ -734,7 +734,7 @@ public class Terminal {
         }
     }
 
-    public void commandAction(String commandName, String[] args) {
+    public void chooseCommandAction(String commandName, String[] args) {
         switch (commandName.toLowerCase()) {
             case "pwd":
                 if (args.length == 0) {
